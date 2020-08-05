@@ -1,0 +1,89 @@
+<?php
+
+/**
+ * @file
+ * Primary module hooks for Commerce Marketplace Order module.
+ *
+ * @DCG
+ * This file is no longer required in Drupal 8.
+ * @see https://www.drupal.org/node/2217931
+ */
+
+use Drupal\commerce_marketplace_order\Form\CommerceMarketplaceOrderAddToCartForm;
+use Drupal\commerce_marketplace_order\StoreShippingMethodStorage;
+use Drupal\commerce_order\Entity\OrderItem;
+
+/**
+ * Main module constants.
+ */
+define("MARKETPLACE_ORDER_TYPE", 'marketplace_order');
+
+/**
+ * Implements hook_entity_type_alter().
+ */
+function commerce_marketplace_order_entity_type_alter(array &$entity_types) {
+  /** @var \Drupal\Core\Entity\EntityTypeInterface[] $entity_types */
+  $entity_types['commerce_order_item']->setFormClass('add_to_cart', CommerceMarketplaceOrderAddToCartForm::class);
+  $entity_types['commerce_shipping_method']->setStorageClass(StoreShippingMethodStorage::class);
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK_alter() for views_view_table.
+ */
+function commerce_marketplace_order_theme_suggestions_views_view_table_alter(array &$suggestions, array $variables, $hook) {
+  if ($variables['view']->id() !== 'commerce_cart_form' || empty($variables['view']->result)) {
+    return;
+  }
+  $view = $variables['view'];
+  $entity = reset($view->result)->_entity;
+  if ($entity->bundle() !== MARKETPLACE_ORDER_TYPE) {
+    return;
+  }
+  $suggestions = [];
+  $suggestions[] = $hook . '__' . 'commerce_marketplace_cart';
+
+  return $suggestions;
+}
+
+/**
+ * Implements hook_preprocess_HOOK().
+ *
+ * For views-view-table--commerce-marketplace-cart.html.twig.
+ */
+function commerce_marketplace_order_preprocess_views_view_table(&$variables) {
+  if ($variables['view']->id() !== 'commerce_cart_form' || empty($variables['view']->result)) {
+    return;
+  }
+  $view = $variables['view'];
+  $entity = reset($view->result)->_entity;
+  if ($entity->bundle() !== MARKETPLACE_ORDER_TYPE || !isset($variables['description'])) {
+    return;
+  }
+
+  $grouping_subtotal = [];
+  foreach ($variables['result'] as $item) {
+    $order_item_id = $item->commerce_order_item_commerce_order__order_items_order_item_i;
+    $order_item = OrderItem::load($order_item_id);
+    $order_item_total_price = $order_item->get('total_price')->getValue()[0]['number'];
+    $order_item_currency_code = $order_item->get('total_price')->getValue()[0]['currency_code'];
+    if (!isset($grouping_subtotal[$order_item_currency_code])) {
+      $grouping_subtotal[$order_item_currency_code] = 0;
+    }
+    $grouping_subtotal[$order_item_currency_code] += $order_item_total_price;
+  }
+
+  $variables['description'] = ['grouping_subtotal' => $grouping_subtotal];
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function commerce_marketplace_order_form_commerce_product_variation_form_alter(array &$form, $form_state, $form_id) {
+  // Temporary make weight field not required for product variations.
+  if (isset($form['weight']['widget'][0]['#required'])) {
+    $form['weight']['widget'][0]['#required'] = FALSE;
+    if (is_null($form['weight']['widget'][0]['#default_value']['number'])) {
+      $form['weight']['widget'][0]['#default_value']['number'] = 0;
+    }
+  }
+}

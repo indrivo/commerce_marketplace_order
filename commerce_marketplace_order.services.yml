@@ -1,0 +1,24 @@
+services:
+  commerce_marketplace_order.event_subscriber:
+    class: Drupal\commerce_marketplace_order\EventSubscriber\CommerceMarketplaceOrderSubscriber
+    arguments: ['@messenger', '@commerce_marketplace_order.cmp_order_service']
+    tags:
+      - { name: event_subscriber }
+
+  commerce_marketplace_order.cmp_order_service:
+    class: Drupal\commerce_marketplace_order\CommerceMarketplaceOrderService
+    arguments: [
+      '@commerce_cart.cart_manager',
+      '@commerce_cart.cart_provider',
+      '@commerce_order.chain_order_type_resolver',
+      '@commerce_store.current_store',
+      '@current_user',
+      '@entity.manager',
+      '@commerce_price.chain_price_resolver',
+      '@entity_type.manager'
+      ]
+  commerce_marketplace_order.store_packer:
+    class: Drupal\commerce_marketplace_order\Packer\StorePacker
+    arguments: ['@entity_type.manager']
+    tags:
+      - { name: commerce_shipping.packer, priority: 0 }

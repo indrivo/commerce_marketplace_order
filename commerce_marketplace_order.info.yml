@@ -1,0 +1,12 @@
+name: Commerce Marketplace Order
+type: module
+description: Marketplace order module provide a new order type which is used as the top-level orders and is used to handle customer carts. Customers only see this type of orders.
+package: MarketPlace
+dependencies:
+  - commerce:commerce_product
+  - commerce:commerce_cart
+  - commerce:commerce_tax
+  - commerce:commerce_store (>=8.x-2.16)
+  - commerce_marketplace
+core: 8.x
+core_version_requirement: ^8 || ^9
